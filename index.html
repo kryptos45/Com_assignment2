@@ -1,0 +1,1065 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape Alarm PRO</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07090f;
+  --bg2: #0d1018;
+  --surface: rgba(255,255,255,0.04);
+  --surface2: rgba(255,255,255,0.07);
+  --surface3: rgba(255,255,255,0.11);
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.18);
+  --text: #eef0ff;
+  --muted: rgba(238,240,255,0.5);
+  --hint: rgba(238,240,255,0.25);
+  --cyan: #00e5ff;
+  --cyan-dim: rgba(0,229,255,0.15);
+  --cyan-glow: rgba(0,229,255,0.3);
+  --green: #00ffb0;
+  --green-dim: rgba(0,255,176,0.15);
+  --red: #ff3d5a;
+  --red-dim: rgba(255,61,90,0.15);
+  --amber: #ffb020;
+  --purple: #a78bff;
+  --r: 20px;
+  --r-sm: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  overflow: hidden;
+  padding: 16px;
+}
+
+/* BG */
+.bg-scene {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  pointer-events: none;
+}
+.grid-lines {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.orb {
+  position: absolute; border-radius: 50%;
+  filter: blur(90px); opacity: 0;
+  animation: orbFloat linear infinite;
+}
+.orb1 { width:500px;height:500px; background:radial-gradient(circle,rgba(0,229,255,0.22) 0%,transparent 70%); top:-120px;left:-100px; animation-duration:28s; }
+.orb2 { width:450px;height:450px; background:radial-gradient(circle,rgba(167,139,255,0.18) 0%,transparent 70%); bottom:-80px;right:-80px; animation-duration:34s;animation-delay:-7s; }
+.orb3 { width:350px;height:350px; background:radial-gradient(circle,rgba(0,255,176,0.14) 0%,transparent 70%); top:35%;left:45%; animation-duration:22s;animation-delay:-12s; }
+@keyframes orbFloat {
+  0%   { opacity:0; transform:translate(0,0) scale(1); }
+  15%  { opacity:1; }
+  50%  { transform:translate(80px,-60px) scale(1.15); }
+  85%  { opacity:1; }
+  100% { opacity:0; transform:translate(0,0) scale(1); }
+}
+
+/* PHONE */
+#app {
+  position: relative; z-index: 10;
+  width: 390px; height: 820px;
+  border-radius: 48px;
+  background: rgba(7, 9, 15, 0.82);
+  backdrop-filter: blur(60px);
+  -webkit-backdrop-filter: blur(60px);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  overflow: hidden;
+  box-shadow:
+    0 60px 120px rgba(0,0,0,0.85),
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 0 0 0.5px rgba(255,255,255,0.04);
+  animation: appIn 1s cubic-bezier(0.16,1,0.3,1) both;
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+@keyframes appIn {
+  from { opacity:0; transform:translateY(50px) scale(0.94); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+#app.danger-mode {
+  border-color: var(--red);
+  box-shadow: 0 60px 120px rgba(0,0,0,0.85), 0 0 40px rgba(255,61,90,0.3), inset 0 0 60px rgba(255,61,90,0.05);
+  animation: appIn 0s, dangerPulse 1.5s ease infinite;
+}
+@keyframes dangerPulse {
+  0%,100% { box-shadow: 0 60px 120px rgba(0,0,0,0.85), 0 0 25px rgba(255,61,90,0.25), inset 0 0 40px rgba(255,61,90,0.04); }
+  50%      { box-shadow: 0 60px 120px rgba(0,0,0,0.85), 0 0 55px rgba(255,61,90,0.5), inset 0 0 80px rgba(255,61,90,0.1); }
+}
+
+/* PAGES */
+.page {
+  position: absolute; inset: 0;
+  padding: 28px 22px 96px;
+  overflow-y: auto;
+  opacity: 0; pointer-events: none;
+  transform: translateY(16px);
+  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.page.active { opacity:1; pointer-events:auto; transform:translateY(0); }
+.page::-webkit-scrollbar { display: none; }
+
+/* TABBAR */
+.tabbar {
+  position: absolute; bottom:0; left:0; right:0;
+  height: 88px;
+  background: rgba(7,9,15,0.95);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: center; justify-content: space-around;
+  padding-bottom: 18px; z-index: 50;
+}
+.tab {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+  color: var(--hint); font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: all 0.3s; letter-spacing: 0.5px;
+}
+.tab.active { color: var(--cyan); }
+.tab-icon { font-size: 20px; margin-bottom: 1px; transition: transform 0.3s; }
+.tab.active .tab-icon { transform: translateY(-3px) scale(1.12); }
+
+/* HEADER */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 22px; animation: fadeUp 0.7s 0.1s both;
+}
+.header-badge {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(0,229,255,0.08);
+  border: 1px solid rgba(0,229,255,0.2);
+  border-radius: 100px; padding: 5px 12px;
+}
+.pulse-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  animation: pulseDot 2s ease infinite;
+}
+@keyframes pulseDot {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.35; transform:scale(0.65); }
+}
+.header-label { font-size: 11px; font-weight: 700; color: var(--cyan); letter-spacing: 1px; text-transform: uppercase; }
+.header-version { font-size: 11px; font-weight: 500; color: var(--hint); font-family: 'JetBrains Mono', monospace; }
+
+/* CLOCK */
+.clock-wrap {
+  text-align: center; margin-bottom: 22px;
+  animation: fadeUp 0.7s 0.15s both;
+}
+.clock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 56px; font-weight: 700;
+  color: var(--text);
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.clock-sec { color: var(--cyan); opacity: 0.8; }
+.clock-date { font-size: 12px; color: var(--muted); margin-top: 6px; letter-spacing: 0.8px; }
+
+/* STATUS */
+.status-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  margin-bottom: 18px; transition: all 0.4s;
+  animation: fadeUp 0.7s 0.2s both;
+}
+.status-bar.active { background: rgba(0,229,255,0.05); border-color: rgba(0,229,255,0.25); }
+.status-bar.danger { background: rgba(255,61,90,0.07); border-color: rgba(255,61,90,0.35); }
+.status-indicator {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--hint); flex-shrink: 0; transition: 0.3s;
+}
+.status-bar.active .status-indicator { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: pulseDot 2s ease infinite; }
+.status-bar.danger .status-indicator  { background: var(--red); box-shadow: 0 0 10px var(--red); animation: pulseDot 0.6s ease infinite; }
+.status-text { font-size: 13px; font-weight: 500; color: var(--muted); transition: 0.3s; }
+.status-bar.active .status-text { color: var(--cyan); }
+.status-bar.danger .status-text  { color: var(--red); font-weight: 700; }
+
+/* CARDS */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+  margin-bottom: 14px;
+  transition: all 0.3s;
+  animation: fadeUp 0.7s both;
+}
+.card-label {
+  font-size: 10px; font-weight: 700; color: var(--hint);
+  text-transform: uppercase; letter-spacing: 1.8px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 6px;
+}
+.card-label::before {
+  content: ''; display: block;
+  width: 3px; height: 12px; border-radius: 2px;
+  background: var(--cyan);
+}
+
+/* TIME INPUT */
+.time-input-wrap {
+  position: relative; margin-bottom: 14px;
+}
+input[type="time"] {
+  width: 100%; padding: 16px 16px;
+  background: rgba(0,229,255,0.04);
+  border: 1.5px solid rgba(0,229,255,0.18);
+  border-radius: var(--r-sm);
+  color: var(--text); font-size: 34px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700; text-align: center;
+  outline: none; transition: 0.3s;
+  color-scheme: dark; letter-spacing: -1px;
+}
+input[type="time"]:focus {
+  border-color: var(--cyan);
+  background: rgba(0,229,255,0.08);
+  box-shadow: 0 0 0 3px rgba(0,229,255,0.1);
+}
+
+/* DAY PICKER */
+.section-label {
+  font-size: 11px; font-weight: 600; color: var(--hint);
+  letter-spacing: 0.8px; margin-bottom: 8px;
+}
+.days-picker {
+  display: flex; justify-content: space-between; gap: 5px; margin-bottom: 14px;
+}
+.day-btn {
+  flex: 1; aspect-ratio: 1;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted); font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.22s;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.day-btn:hover { background: var(--surface3); border-color: var(--border2); color: var(--text); }
+.day-btn.selected {
+  background: rgba(0,229,255,0.14);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 14px rgba(0,229,255,0.2), inset 0 0 14px rgba(0,229,255,0.05);
+  font-weight: 800;
+}
+
+/* SELECT */
+.obj-select {
+  width: 100%; padding: 13px 16px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: var(--r-sm);
+  color: var(--text); font-size: 14px; font-weight: 500;
+  font-family: 'Space Grotesk', sans-serif;
+  outline: none; cursor: pointer; transition: 0.3s;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%2300e5ff' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+  padding-right: 36px; margin-bottom: 14px;
+  color-scheme: dark;
+}
+.obj-select:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,229,255,0.1);
+}
+.obj-select option { background: #0d1018; }
+
+/* BUTTONS */
+.btn-primary {
+  width: 100%; padding: 15px 20px;
+  background: linear-gradient(135deg, #00e5ff 0%, #0094ff 100%);
+  color: #000f20; font-size: 15px; font-weight: 800;
+  border: none; border-radius: var(--r-sm); cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 0.3px;
+  transition: all 0.25s;
+  box-shadow: 0 8px 24px rgba(0,229,255,0.25), 0 2px 8px rgba(0,229,255,0.15);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(0,229,255,0.35), 0 4px 12px rgba(0,229,255,0.2);
+}
+.btn-primary:active { transform: translateY(0); }
+
+/* COUNTDOWN TIMER BAR */
+.countdown-wrap {
+  display: none;
+  margin-top: 12px;
+  background: rgba(255,61,90,0.08);
+  border: 1.5px solid rgba(255,61,90,0.3);
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+  animation: fadeUp 0.4s ease both;
+}
+.countdown-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.countdown-label {
+  font-size: 12px; font-weight: 700; color: var(--red);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.countdown-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px; font-weight: 700; color: var(--red);
+  line-height: 1;
+}
+.countdown-num.urgent { animation: countUrgent 0.5s ease infinite; }
+@keyframes countUrgent {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+.countdown-bar-bg {
+  width: 100%; height: 6px; background: rgba(255,61,90,0.15);
+  border-radius: 100px; overflow: hidden;
+}
+.countdown-bar-fill {
+  height: 100%; background: linear-gradient(90deg, var(--red), #ff8c00);
+  border-radius: 100px;
+  transition: width 1s linear;
+  box-shadow: 0 0 8px rgba(255,61,90,0.5);
+}
+
+.btn-danger {
+  width: 100%; padding: 15px 20px;
+  background: linear-gradient(135deg, #ff3d5a 0%, #ff6b35 100%);
+  color: white; font-size: 15px; font-weight: 800;
+  border: none; border-radius: var(--r-sm); cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 0.3px;
+  transition: all 0.25s;
+  box-shadow: 0 8px 24px rgba(255,61,90,0.3), 0 2px 8px rgba(255,61,90,0.2);
+  display: none;
+  margin-top: 12px;
+  animation: dangerBtn 1.5s ease infinite;
+}
+@keyframes dangerBtn {
+  0%,100% { box-shadow: 0 8px 24px rgba(255,61,90,0.3); }
+  50%      { box-shadow: 0 8px 30px rgba(255,61,90,0.55); }
+}
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(255,61,90,0.45);
+}
+
+.btn-ghost {
+  width: 100%; padding: 13px 20px;
+  background: transparent;
+  color: var(--muted); font-size: 14px; font-weight: 600;
+  border: 1.5px solid var(--border2); border-radius: var(--r-sm);
+  cursor: pointer; font-family: 'Space Grotesk', sans-serif;
+  transition: all 0.25s; margin-top: 8px;
+}
+.btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,0.04); }
+
+.btn-del {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,61,90,0.1);
+  color: var(--red); border: 1px solid rgba(255,61,90,0.2);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; transition: all 0.2s; flex-shrink: 0;
+}
+.btn-del:hover { background: var(--red); color: white; border-color: var(--red); transform: scale(1.1); }
+
+/* ROUTINE LIST */
+.routine-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 220px; overflow-y: auto;
+}
+.routine-list::-webkit-scrollbar { width: 3px; }
+.routine-list::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.2); border-radius: 10px; }
+
+.routine-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  transition: all 0.25s;
+  animation: slideIn 0.35s ease both;
+}
+.routine-item:hover { border-color: rgba(0,229,255,0.18); background: rgba(0,229,255,0.03); }
+@keyframes slideIn { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+
+.r-left { display: flex; align-items: center; gap: 12px; }
+.r-time-badge {
+  background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.2);
+  border-radius: 8px; padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700;
+  color: var(--text); letter-spacing: -0.5px; white-space: nowrap;
+}
+.r-meta { display: flex; flex-direction: column; gap: 2px; }
+.r-days { font-size: 11px; color: var(--cyan); font-weight: 600; }
+.r-obj { font-size: 11px; color: var(--muted); }
+
+/* CAMERA AREA */
+.camera-wrap {
+  margin-top: 14px; border-radius: var(--r);
+  overflow: hidden; border: 1.5px solid rgba(0,229,255,0.25);
+  background: #000;
+  position: relative;
+}
+.camera-wrap video {
+  width: 100%; height: 200px; object-fit: cover;
+  display: block;
+}
+.camera-overlay {
+  position: absolute; inset: 0;
+  border: 2px solid rgba(0,229,255,0.4);
+  border-radius: var(--r);
+  pointer-events: none;
+}
+.camera-overlay::before, .camera-overlay::after {
+  content: ''; position: absolute;
+  width: 24px; height: 24px;
+  border-color: var(--cyan); border-style: solid;
+}
+.camera-overlay::before { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+.camera-overlay::after  { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+.camera-hint {
+  background: rgba(0,229,255,0.08);
+  border-top: 1px solid rgba(0,229,255,0.15);
+  padding: 8px 14px; font-size: 12px; color: var(--cyan);
+  font-weight: 600; text-align: center; letter-spacing: 0.3px;
+}
+.btn-capture {
+  width: 100%; padding: 14px;
+  background: rgba(255,255,255,0.95);
+  color: #07090f; font-size: 15px; font-weight: 800;
+  border: none; cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-capture:hover { background: white; }
+.btn-capture:active { transform: scale(0.98); }
+
+.camera-error {
+  padding: 20px; text-align: center;
+  background: rgba(255,61,90,0.07);
+  border-radius: var(--r); margin-top: 14px;
+}
+.camera-error .e-icon { font-size: 30px; margin-bottom: 8px; }
+.camera-error .e-msg { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+.btn-manual {
+  width: 100%; padding: 13px; border-radius: var(--r-sm);
+  background: linear-gradient(135deg, var(--amber), #ff8c00);
+  color: #000; font-size: 14px; font-weight: 800;
+  border: none; cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  transition: all 0.25s;
+}
+.btn-manual:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,176,32,0.3); }
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center; padding: 24px 12px;
+  color: var(--hint); font-size: 13px; line-height: 1.7;
+}
+.empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.5; }
+
+/* CALENDAR */
+.cal-nav {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.cal-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.cal-nav-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--muted); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: 0.2s;
+}
+.cal-nav-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.cal-header-cell {
+  text-align: center; font-size: 10px; font-weight: 700;
+  color: var(--hint); letter-spacing: 0.5px; padding: 4px 0;
+}
+.cal-day {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 500; border-radius: 9px;
+  background: rgba(255,255,255,0.025); color: var(--muted); transition: 0.2s;
+}
+.cal-day.today { outline: 1.5px solid var(--cyan); color: var(--cyan); font-weight: 700; }
+.cal-day.success { background: rgba(0,255,176,0.15); color: var(--green); font-weight: 700; }
+.cal-day.fail    { background: rgba(255,61,90,0.15); color: var(--red); font-weight: 700; }
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 16px; text-align: center;
+}
+.stat-num { font-size: 26px; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+.stat-lbl { font-size: 10px; font-weight: 700; color: var(--hint); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px; }
+.streak-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 16px;
+  display: flex; align-items: center; gap: 14px; margin-top: 12px;
+}
+.streak-icon { font-size: 28px; }
+.streak-info .s-num { font-size: 22px; font-weight: 800; color: var(--amber); font-family: 'JetBrains Mono', monospace; }
+.streak-info .s-lbl { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+/* MODAL */
+.modal-overlay {
+  position: absolute; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(24px);
+  display: none; align-items: center; justify-content: center; padding: 28px;
+}
+.modal-overlay.show { display: flex; }
+.modal-card {
+  background: var(--bg2); border: 1.5px solid var(--border2);
+  border-radius: 28px; padding: 36px 28px; width: 100%; text-align: center;
+  animation: modalIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes modalIn { from { opacity:0; transform:scale(0.9) translateY(20px); } to { opacity:1; transform:none; } }
+.modal-icon { font-size: 56px; margin-bottom: 16px; }
+.modal-title { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 8px; letter-spacing: -0.5px; }
+.modal-desc { font-size: 14px; color: var(--muted); margin-bottom: 26px; line-height: 1.6; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-scene">
+  <div class="grid-lines"></div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div id="app">
+
+  <!-- PAGE: HOME -->
+  <div id="homePage" class="page active">
+
+    <div class="app-header">
+      <div class="header-badge">
+        <div class="pulse-dot"></div>
+        <span class="header-label">Escape Alarm</span>
+      </div>
+      <span class="header-version">PRO v2</span>
+    </div>
+
+    <div class="clock-wrap">
+      <div class="clock">
+        <span id="clockHM">00:00</span><span class="clock-sec" id="clockS">:00</span>
+      </div>
+      <div class="clock-date" id="clockDate">2026. 05. 31. 일요일</div>
+    </div>
+
+    <div class="status-bar" id="statusBar">
+      <div class="status-indicator"></div>
+      <span class="status-text" id="statusText">등록된 루틴이 없습니다</span>
+    </div>
+
+    <!-- ADD ROUTINE CARD -->
+    <div class="card" style="animation-delay:0.05s">
+      <div class="card-label">기상 루틴 추가</div>
+
+      <input type="time" id="timeInput" value="07:00">
+
+      <div class="section-label" style="margin-top:12px;">반복 요일</div>
+      <div class="days-picker">
+        <button class="day-btn" data-day="1">월</button>
+        <button class="day-btn" data-day="2">화</button>
+        <button class="day-btn" data-day="3">수</button>
+        <button class="day-btn" data-day="4">목</button>
+        <button class="day-btn" data-day="5">금</button>
+        <button class="day-btn" data-day="6">토</button>
+        <button class="day-btn" data-day="0">일</button>
+      </div>
+
+      <div class="section-label">촬영 미션 대상</div>
+      <select id="objInput" class="obj-select">
+        <option value="텀블러">🥤 텀블러</option>
+        <option value="노트북">💻 노트북</option>
+        <option value="운동화">👟 운동화</option>
+        <option value="안경">👓 안경</option>
+        <option value="책">📖 책</option>
+        <option value="열쇠">🔑 열쇠</option>
+      </select>
+
+      <button class="btn-primary" onclick="addRoutine()">✚ 루틴 저장하기</button>
+    </div>
+
+    <!-- ROUTINE LIST CARD -->
+    <div class="card" style="animation-delay:0.12s">
+      <div class="card-label">나의 루틴 목록</div>
+      <div class="routine-list" id="routineList"></div>
+    </div>
+
+    <!-- ALARM TRIGGERED AREA -->
+    <button id="missionBtn" class="btn-danger" onclick="openCamera()">
+      📸 미션 시작 — 카메라 열기
+    </button>
+
+    <!-- COUNTDOWN TIMER (알람 후 1분 카운트다운) -->
+    <div class="countdown-wrap" id="countdownWrap">
+      <div class="countdown-header">
+        <span class="countdown-label">⏳ 미션 제한 시간</span>
+        <span class="countdown-num" id="countdownNum">60</span>
+      </div>
+      <div class="countdown-bar-bg">
+        <div class="countdown-bar-fill" id="countdownFill" style="width:100%"></div>
+      </div>
+    </div>
+
+    <div id="cameraArea"></div>
+
+  </div>
+
+  <!-- PAGE: CALENDAR -->
+  <div id="calendarPage" class="page">
+
+    <div class="app-header" style="animation:none;">
+      <span style="font-size:16px; font-weight:800; color:var(--text);">통계 & 기록</span>
+      <span class="header-version" id="calMonth">2026년 5월</span>
+    </div>
+
+    <div class="card">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+        <span class="cal-title" id="calMonthTitle">2026년 5월</span>
+        <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--green)" id="statSuccess">0</div>
+        <div class="stat-lbl">성공</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" style="color:var(--red)" id="statFail">0</div>
+        <div class="stat-lbl">실패</div>
+      </div>
+    </div>
+
+    <div class="streak-card">
+      <span class="streak-icon">🔥</span>
+      <div class="streak-info">
+        <div class="s-num"><span id="statStreak">0</span>일</div>
+        <div class="s-lbl">연속 성공 스트릭</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TABBAR -->
+  <nav class="tabbar">
+    <div class="tab active" onclick="switchPage('home', this)">
+      <span class="tab-icon">🕒</span><span>홈</span>
+    </div>
+    <div class="tab" onclick="switchPage('calendar', this)">
+      <span class="tab-icon">📊</span><span>통계</span>
+    </div>
+  </nav>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-card">
+      <div class="modal-icon" id="modalIcon">✅</div>
+      <div class="modal-title" id="modalTitle">미션 완료!</div>
+      <div class="modal-desc" id="modalDesc">오늘도 탈출 성공. 좋은 하루 시작하세요.</div>
+      <button class="btn-primary" onclick="closeModal()">확인</button>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// ─── STATE ───────────────────────────────────────────────────────────
+let routines   = JSON.parse(localStorage.getItem('routines')      || '[]');
+let history    = JSON.parse(localStorage.getItem('alarmHistory')  || '[]');
+let selectedDays = new Set();
+let alarmFired   = false;
+let activeRoutine = null;
+let stream       = null;
+let calViewDate  = new Date();
+
+// ─── CLOCK ───────────────────────────────────────────────────────────
+const KR_DAYS = ['일','월','화','수','목','금','토'];
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  $('clockHM').textContent = `${h}:${m}`;
+  $('clockS').textContent  = `:${s}`;
+  $('clockDate').textContent = `${now.getFullYear()}. ${String(now.getMonth()+1).padStart(2,'0')}. ${String(now.getDate()).padStart(2,'0')}. ${KR_DAYS[now.getDay()]}요일`;
+
+  if (!alarmFired && s === '00') {
+    const today = now.getDay();
+    const timeStr = `${h}:${m}`;
+    const hit = routines.find(r => r.time === timeStr && (r.days.length === 0 || r.days.includes(today)));
+    if (hit) triggerAlarm(hit);
+  }
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── DAY PICKER ──────────────────────────────────────────────────────
+document.querySelectorAll('.day-btn').forEach(btn => {
+  btn.onclick = () => {
+    const d = parseInt(btn.dataset.day);
+    if (selectedDays.has(d)) { selectedDays.delete(d); btn.classList.remove('selected'); }
+    else                      { selectedDays.add(d);    btn.classList.add('selected'); }
+  };
+});
+
+// ─── ROUTINE CRUD ─────────────────────────────────────────────────────
+function addRoutine() {
+  const time   = $('timeInput').value;
+  const object = $('objInput').value;
+  const days   = Array.from(selectedDays).sort();
+  if (!time) return;
+
+  routines.push({ id: Date.now(), time, days, object });
+  localStorage.setItem('routines', JSON.stringify(routines));
+  selectedDays.clear();
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('selected'));
+  renderRoutines();
+}
+
+function deleteRoutine(id) {
+  routines = routines.filter(r => r.id !== id);
+  localStorage.setItem('routines', JSON.stringify(routines));
+  renderRoutines();
+}
+
+function renderRoutines() {
+  const container = $('routineList');
+  if (!routines.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⏰</div>
+        <div>아직 등록된 루틴이 없습니다.<br>위에서 첫 번째 루틴을 추가해보세요.</div>
+      </div>`;
+    updateStatus('idle');
+    return;
+  }
+
+  container.innerHTML = routines
+    .sort((a,b) => a.time.localeCompare(b.time))
+    .map(r => {
+      const dayLabels = r.days.length === 0 ? '매일' : r.days.map(d => KR_DAYS[d]).join(' ');
+      return `
+        <div class="routine-item">
+          <div class="r-left">
+            <div class="r-time-badge">${r.time}</div>
+            <div class="r-meta">
+              <div class="r-days">🔁 ${dayLabels}</div>
+              <div class="r-obj">🎯 ${r.object}</div>
+            </div>
+          </div>
+          <button class="btn-del" onclick="deleteRoutine(${r.id})" title="삭제">✕</button>
+        </div>`;
+    }).join('');
+
+  updateStatus('active');
+}
+
+function updateStatus(mode) {
+  const bar  = $('statusBar');
+  const text = $('statusText');
+  bar.className = 'status-bar';
+  if (mode === 'active') {
+    bar.classList.add('active');
+    text.textContent = `${routines.length}개의 루틴 감시 중`;
+  } else if (mode === 'danger') {
+    bar.classList.add('danger');
+    text.textContent = `🚨 알람 발생! [${activeRoutine?.object}] 촬영 미션 진행 중`;
+  } else {
+    text.textContent = '등록된 루틴이 없습니다';
+  }
+}
+
+// ─── ALARM & MISSION ─────────────────────────────────────────────────
+let failTimer      = null;   // setTimeout ID — 60초 후 자동 실패
+let countdownTimer = null;   // setInterval ID — 1초마다 카운트다운 UI 갱신
+const FAIL_SECONDS = 60;     // 제한 시간 (초)
+
+function triggerAlarm(routine) {
+  alarmFired    = true;
+  activeRoutine = routine;
+  $('app').classList.add('danger-mode');
+  $('missionBtn').style.display = 'block';
+  updateStatus('danger');
+
+  // 카운트다운 UI 표시
+  startCountdown();
+
+  // Web Audio 경고음
+  try {
+    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = () => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'square'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.3, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.4);
+    };
+    beep();
+    setTimeout(beep, 600);
+    setTimeout(beep, 1200);
+  } catch(e) {}
+}
+
+function startCountdown() {
+  let remaining = FAIL_SECONDS;
+  const fillEl  = $('countdownFill');
+  const numEl   = $('countdownNum');
+  const wrapEl  = $('countdownWrap');
+
+  wrapEl.style.display = 'block';
+  numEl.textContent    = remaining;
+  fillEl.style.width   = '100%';
+  numEl.classList.remove('urgent');
+
+  // 1초마다 UI 갱신
+  countdownTimer = setInterval(() => {
+    remaining--;
+    const pct = (remaining / FAIL_SECONDS) * 100;
+    numEl.textContent  = remaining;
+    fillEl.style.width = pct + '%';
+    if (remaining <= 10) numEl.classList.add('urgent');
+    if (remaining <= 0) clearInterval(countdownTimer);
+  }, 1000);
+
+  // 60초 후 자동 실패
+  failTimer = setTimeout(() => {
+    if (alarmFired) triggerFail();
+  }, FAIL_SECONDS * 1000);
+}
+
+function stopTimers() {
+  if (failTimer)      { clearTimeout(failTimer);   failTimer      = null; }
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  const wrapEl = $('countdownWrap');
+  if (wrapEl) wrapEl.style.display = 'none';
+}
+
+function triggerFail() {
+  stopTimers();
+  stopStream();
+  alarmFired = false;
+  $('app').classList.remove('danger-mode');
+  $('missionBtn').style.display = 'none';
+  $('cameraArea').innerHTML = '';
+  updateStatus(routines.length ? 'active' : 'idle');
+
+  // 실패 기록 저장
+  const now     = new Date();
+  const dateKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+  history = history.filter(h => h.date !== dateKey);
+  history.push({ date: dateKey, status: 'fail' });
+  localStorage.setItem('alarmHistory', JSON.stringify(history));
+
+  // 실패 모달 표시
+  $('modalIcon').textContent  = '😵';
+  $('modalTitle').textContent = '미션 실패...';
+  $('modalDesc').textContent  = `제한 시간 ${FAIL_SECONDS}초 내에 [${activeRoutine?.object}] 촬영을 완료하지 못했습니다.\n내일은 꼭 성공해봐요!`;
+  $('modalOverlay').classList.add('show');
+}
+
+// 카메라 열기 (환경카메라 → 전면카메라 → 오류 폴백)
+async function openCamera() {
+  const area = $('cameraArea');
+
+  // 카메라 지원 여부 체크
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showCameraError(area, 'no-support');
+    return;
+  }
+
+  // UI 먼저 그리기
+  area.innerHTML = `
+    <div class="camera-wrap" id="cameraWrap">
+      <video id="cameraVideo" autoplay playsinline muted
+             style="width:100%;height:200px;object-fit:cover;display:block;"></video>
+      <div class="camera-overlay"></div>
+      <div class="camera-hint">📍 [${activeRoutine?.object}] 이 보이도록 카메라를 향해주세요</div>
+      <button class="btn-capture" id="captureBtn" onclick="completeMission()">
+        <span style="font-size:18px;">📸</span> 인증 사진 촬영
+      </button>
+    </div>`;
+
+  const video = $('cameraVideo');
+
+  // 후면 카메라 → 전면 카메라 → 임의 카메라 순서로 시도
+  const constraints = [
+    { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+    { video: { facingMode: 'user' } },
+    { video: true }
+  ];
+
+  for (const constraint of constraints) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraint);
+      video.srcObject = stream;
+      await video.play();
+      return; // 성공하면 종료
+    } catch (err) {
+      console.warn('Camera attempt failed:', err.name, constraint);
+      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    }
+  }
+
+  // 모든 시도 실패
+  showCameraError(area, 'permission');
+}
+
+function showCameraError(area, type) {
+  const msgs = {
+    'no-support': {
+      icon: '🚫',
+      msg: '이 브라우저에서는 카메라가 지원되지 않습니다.<br>Chrome 또는 Safari 최신 버전을 사용해주세요.',
+    },
+    'permission': {
+      icon: '🔒',
+      msg: '카메라 접근 권한이 거부되었습니다.<br>브라우저 설정에서 카메라 권한을 허용한 후<br>다시 시도해주세요.',
+    }
+  };
+  const m = msgs[type] || msgs['permission'];
+
+  area.innerHTML = `
+    <div class="camera-error">
+      <div class="e-icon">${m.icon}</div>
+      <div class="e-msg">${m.msg}</div>
+      <button class="btn-manual" onclick="completeMission()">
+        📋 수동 인증으로 미션 완료
+      </button>
+    </div>`;
+}
+
+function stopStream() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+}
+
+function completeMission() {
+  stopTimers();   // 성공 시 실패 타이머 취소
+  stopStream();
+  alarmFired = false;
+  $('app').classList.remove('danger-mode');
+  $('missionBtn').style.display = 'none';
+  $('cameraArea').innerHTML = '';
+  updateStatus(routines.length ? 'active' : 'idle');
+
+  const now     = new Date();
+  const dateKey = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+  history = history.filter(h => h.date !== dateKey);
+  history.push({ date: dateKey, status: 'success' });
+  localStorage.setItem('alarmHistory', JSON.stringify(history));
+
+  // 성공 모달
+  $('modalIcon').textContent  = '🎉';
+  $('modalTitle').textContent = 'Good Morning!';
+  $('modalDesc').textContent  = `[${activeRoutine?.object}] 촬영 완료. 오늘 하루도 탈출 성공!`;
+  $('modalOverlay').classList.add('show');
+}
+
+// ─── PAGE NAVIGATION ─────────────────────────────────────────────────
+function switchPage(p, el) {
+  document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t  => t.classList.remove('active'));
+  $(p + 'Page').classList.add('active');
+  el.classList.add('active');
+  if (p === 'calendar') renderCalendar();
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────
+function closeModal() { $('modalOverlay').classList.remove('show'); }
+
+// ─── CALENDAR ────────────────────────────────────────────────────────
+function changeMonth(dir) {
+  calViewDate.setMonth(calViewDate.getMonth() + dir);
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const y    = calViewDate.getFullYear();
+  const mo   = calViewDate.getMonth();
+  const last = new Date(y, mo + 1, 0).getDate();
+  const start= new Date(y, mo, 1).getDay();
+
+  $('calMonthTitle').textContent = `${y}년 ${mo+1}월`;
+
+  const succ = history.filter(h => h.status === 'success').length;
+  const fail = history.filter(h => h.status === 'fail').length;
+  $('statSuccess').textContent = succ;
+  $('statFail').textContent    = fail;
+
+  // streak
+  let streak = 0;
+  let check  = new Date();
+  while (true) {
+    const k = `${check.getFullYear()}-${check.getMonth()+1}-${check.getDate()}`;
+    if (history.find(h => h.date === k && h.status === 'success')) {
+      streak++;
+      check.setDate(check.getDate() - 1);
+    } else break;
+  }
+  $('statStreak').textContent = streak;
+
+  const grid = $('calGrid');
+  grid.innerHTML = '';
+
+  ['일','월','화','수','목','금','토'].forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-header-cell';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  for (let i = 0; i < start; i++) {
+    grid.appendChild(document.createElement('div'));
+  }
+
+  const today = new Date();
+  for (let i = 1; i <= last; i++) {
+    const dateKey = `${y}-${mo+1}-${i}`;
+    const record  = history.find(h => h.date === dateKey);
+    const el      = document.createElement('div');
+    el.className  = 'cal-day' + (record ? ` ${record.status}` : '');
+    if (y === today.getFullYear() && mo === today.getMonth() && i === today.getDate())
+      el.className += ' today';
+    el.textContent = i;
+    grid.appendChild(el);
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+renderRoutines();
+</script>
+</body>
+</html>
